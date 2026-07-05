@@ -1,10 +1,12 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import tf_keras
+import tensorflow as tf
 import numpy as np
 from PIL import Image
 import io
 import base64
+import json
+import os
 
 app = Flask(__name__)
 CORS(app)
@@ -30,8 +32,10 @@ def get_severity(raw_class, confidence):
         return 'mild'
 
 print("Loading model...")
-model = tf_keras.models.load_model('quickaid_model.h5')
-print("✅ Model ready")
+model    = tf.saved_model.load('quickaid_savedmodel')
+infer    = model.signatures['serving_default']
+out_key  = list(infer.structured_outputs.keys())[0]
+print(f"✅ Model ready — output key: {out_key}")
 
 @app.route('/health', methods=['GET'])
 def health():
@@ -57,8 +61,9 @@ def classify():
         arr = np.expand_dims(arr, axis=0)
 
         # Run inference
-        predictions = model.predict(arr, verbose=0)
-        scores      = predictions[0].tolist()
+        input_tensor = tf.constant(arr, dtype=tf.float32)
+        output       = infer(input_tensor)
+        scores       = output[out_key].numpy()[0].tolist()
 
         max_index  = int(np.argmax(scores))
         confidence = float(scores[max_index])
