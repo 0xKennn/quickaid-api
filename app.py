@@ -35,3 +35,8 @@ print("✅ Model ready")
 
 @app.route('/health', methods=['GET'])
 def health():
+    return jsonify({
+        'status': 'ok',
+        'model':  'QuickAid MobileNetV2 v1.0',
+        'classes': CLASSES,
+    })
