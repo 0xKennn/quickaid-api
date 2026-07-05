@@ -32,10 +32,9 @@ def get_severity(raw_class, confidence):
         return 'mild'
 
 print("Loading model...")
-model    = tf.saved_model.load('quickaid_savedmodel')
-infer    = model.signatures['serving_default']
-out_key  = list(infer.structured_outputs.keys())[0]
-print(f"✅ Model ready — output key: {out_key}")
+model = tf.saved_model.load('quickaid_savedmodel')
+infer = model.signatures.get('serving_default') or model.serve
+print("✅ Model ready")
 
 @app.route('/health', methods=['GET'])
 def health():
@@ -62,8 +61,7 @@ def classify():
 
         # Run inference
         input_tensor = tf.constant(arr, dtype=tf.float32)
-        output       = infer(input_tensor)
-        scores       = output[out_key].numpy()[0].tolist()
+        scores = model.serve(input_tensor).numpy()[0].tolist()
 
         max_index  = int(np.argmax(scores))
         confidence = float(scores[max_index])
